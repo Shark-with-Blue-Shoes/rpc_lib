@@ -1,0 +1,4 @@
+(library
+ (public_name rpc_lib)
+(name rpc_lib)
+ (libraries yojson))
