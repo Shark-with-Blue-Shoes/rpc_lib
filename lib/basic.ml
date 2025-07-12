@@ -8,6 +8,12 @@ let has_id json =
   | `Null -> false
   | _ -> true
 
+let has_method json = 
+  let open Yojson.Basic.Util in
+  match json |> member "method" with
+  | `Null -> false
+  | _ -> true
+
 (*This gets a required member*)
 let get_req_mem json name : Yojson.Basic.t = 
   let mem = member name json in
@@ -270,4 +276,71 @@ module Packet = struct
     | Notification of Notification.t
     | Request of Request.t
     | Response of Response.t
+    | Batch_response of Response.t list
+    | Batch_call of [ `Request of Request.t | `Notification of Notification.t ] list;;
+
+  let yojson_of_t = function
+    | Notification r -> Notification.yojson_of_t r
+    | Request r -> Request.yojson_of_t r
+    | Response r -> Response.yojson_of_t r
+    | Batch_response r -> `List (List.map Response.yojson_of_t r)
+    | Batch_call r ->
+      `List
+        (List.map (function
+           | `Request r -> Request.yojson_of_t r
+           | `Notification r -> Notification.yojson_of_t r) r)
+  ;;
+
+  let t_of_yo (json : Yojson.Basic.t) =
+    assert_jsonrpc_version json;
+    if has_id json then
+    let req = Request.t_of_yojson json in
+      Request req
+    else if has_method json then 
+      let not = Notification.t_of_yojson json in
+      Notification not
+    else 
+      let res = Response.t_of_yojson json in 
+        Response res;;
+
+  let t_of_yojson_single json =
+    match json with
+    | `Assoc _ -> t_of_yo json
+    | _ -> raise (Yojson.Json_error "invalid packet");;
+
+  let t_of_yojson (json : Yojson.Basic.t) =
+    match json with
+    | `List [] -> raise (Yojson.Json_error "invalid packet")
+    | `List (x :: xs) ->  
+      (* we inspect the first element to see what we're dealing with *)
+      let x =
+        match x with
+        | `Assoc _ -> t_of_yo x
+        | _ -> raise (Yojson.Json_error "invalid packet")
+      in
+      (match
+         match x with
+         | Notification x -> `Call (`Notification x)
+         | Request x -> `Call (`Request x)
+         | Response r -> `Response r
+         | _ -> raise (Yojson.Json_error "invalid packet")
+       with
+       | `Call x ->
+         Batch_call
+           (x
+            :: List.map (fun call ->
+              let x = t_of_yojson_single call in
+              match x with
+              | Notification n -> `Notification n
+              | Request n -> `Request n
+              | _ -> raise (Yojson.Json_error "invalid packet")) xs)
+       | `Response x ->
+         Batch_response
+           (x
+            :: List.map (fun resp ->
+              let resp = t_of_yojson_single resp in
+              match resp with
+              | Response n -> n
+              | _ -> raise (Yojson.Json_error "invalid packet")) xs))
+      | _ -> t_of_yojson_single json;;
 end
