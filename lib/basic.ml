@@ -2,6 +2,7 @@ exception Missing_Member of string
 
 open Yojson.Basic.Util
 
+
 let has_id json = 
   let open Yojson.Basic.Util in
   match json |> member "id" with
@@ -344,3 +345,29 @@ module Packet = struct
               | _ -> raise (Yojson.Json_error "invalid packet")) xs))
       | _ -> t_of_yojson_single json;;
 end
+
+module StringMap :
+  sig
+    type key = string
+    type 'a t = 'a Map.Make(String).t
+    val empty : 'a t
+    val add : key -> 'a -> 'a t -> 'a t
+    val add_to_list : key -> 'a -> 'a list t -> 'a list t
+    val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
+    val singleton : key -> 'a -> 'a t
+    val remove : key -> 'a t -> 'a t
+  end = Map.Make(String);;
+
+ (*
+This is what the ret_res would look like
+ fun params -> let (x,b) = destruct params in fn x b*)
+
+(*This takes a module that has the procedure call function and the destructor*)
+
+let add_to_calls str (ret_res : Structured.t -> Response.t) map : ('a -> 'b) StringMap.t= 
+  StringMap.add str (fun params -> ret_res params) map;;
+
+(*let final_map = 
+  StringMap.empty |> add_to_calls "whatever" (fun params -> Response.construct_response (`Int 7) (Ok (Yojson.Basic.from_string "{}")))
+  |> add_to_calls "skibidi" (fun params -> Response.construct_response (`Int 7) (Ok (Yojson.Basic.from_string "{}")));;
+*)
