@@ -65,45 +65,22 @@ module Id = struct
 
 end
 
-(*I must figure out how to make this more pure, perhaps I can define some structures (defined by lsp)*)
-module Structured = struct
-  type t =
-    [ `Assoc of (string * Yojson.Basic.t) list
-    | `List of Yojson.Basic.t list
-    | `Null 
-    ]
-    
-  let t_of_yojson params : t =
-    match params with
-    | `Assoc x -> `Assoc x
-    | `List ls ->  `List ls
-    | `Null -> `Null
-    | err -> raise (Type_error ("Not correct type of param ", err))
-
-  let yojson_of_t (t : t) : Yojson.Basic.t =
-    match t with 
-    | `Assoc x -> `Assoc x
-    | `List ls ->  `List ls
-    | `Null -> `Null
-    
-end
-
 module Request = struct
   type t =
     { id : Id.t
     ; method_ : string
-    ; params : Structured.t
+    ; params : Yojson.Basic.t
     }
 
   let t_of_yojson json : t = 
     {
       id = get_req_mem json "id" |> Id.t_of_yojson;
       method_ = get_req_mem json "method" |> to_string ;
-      params = get_opt_mem json "params" |> Structured.t_of_yojson
+      params = get_opt_mem json "params"
     }
 
   let yojson_of_t t : Yojson.Basic.t =
-    `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_); "params", (Structured.yojson_of_t t.params)] 
+    `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_); "params", t.params] 
 
   let print t = 
     Printf.printf "%s\n%!" (Yojson.Basic.to_string (yojson_of_t t));;
@@ -113,17 +90,17 @@ end
 module Notification = struct 
   type t =
     { method_ : string
-    ; params : Structured.t
+    ; params : Yojson.Basic.t
     }
   
   let t_of_yojson json : t = 
     {
       method_ = get_req_mem json "method" |> to_string ;
-      params = get_opt_mem json  "params" |> Structured.t_of_yojson
+      params = get_opt_mem json  "params"
     }
 
   let yojson_of_t t : Yojson.Basic.t =
-    `Assoc ["method" , (`String t.method_); "params", (Structured.yojson_of_t t.params)]
+    `Assoc ["method" , (`String t.method_); "params", t.params]
      
   let print t = 
     Printf.printf "%s\n%!" (Yojson.Basic.to_string (yojson_of_t t));;
@@ -365,7 +342,7 @@ This is what the ret_res would look like
 
 (*This takes a module that has the procedure call function and the destructor*)
 
-let add_to_calls str (ret_res : Structured.t -> Response.t) map : ('a -> 'b) StringMap.t= 
+let add_to_calls str (ret_res : Yojson.Basic.t -> Response.t) map : ('a -> 'b) StringMap.t= 
   StringMap.add str (fun params -> ret_res params) map;;
 
 (*let final_map = 
