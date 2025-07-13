@@ -250,12 +250,14 @@ let assert_jsonrpc_version json =
 ;;
 
 module Packet = struct
+  type call = [ `Request of Request.t | `Notification of Notification.t ];;
+
   type bods =
     | Notification of Notification.t
     | Request of Request.t
     | Response of Response.t
     | Batch_response of Response.t list
-    | Batch_call of [ `Request of Request.t | `Notification of Notification.t ] list;;
+    | Batch_call of call list;;
 
   type t = {
     content_length: int;
