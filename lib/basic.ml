@@ -1,6 +1,7 @@
 exception Missing_Member of string
 
 open Yojson.Basic.Util
+open Rgx
 
 let has_id json = 
   let open Yojson.Basic.Util in
@@ -249,12 +250,18 @@ let assert_jsonrpc_version json =
 ;;
 
 module Packet = struct
-  type t =
+  type bods =
     | Notification of Notification.t
     | Request of Request.t
     | Response of Response.t
     | Batch_response of Response.t list
     | Batch_call of [ `Request of Request.t | `Notification of Notification.t ] list;;
+
+  type t = {
+    content_length: int;
+    content_type: string;
+    body: bods
+  }
 
   let yojson_of_t = function
     | Notification r -> Notification.yojson_of_t r
@@ -268,31 +275,35 @@ module Packet = struct
            | `Notification r -> Notification.yojson_of_t r) r)
   ;;
 
-  let t_of_yo (json : Yojson.Basic.t) =
+  let t_of_yojson json =
     assert_jsonrpc_version json;
-    if has_id json then
+    try 
     let req = Request.t_of_yojson json in
       Request req
-    else if has_method json then 
-      let not = Notification.t_of_yojson json in
-      Notification not
-    else 
-      let res = Response.t_of_yojson json in 
-        Response res;;
+      with _ -> try
+        let not = Notification.t_of_yojson json in
+        Notification not
+        with _ -> try
+          let res = Response.t_of_yojson json in 
+          Response res 
+          with _ -> raise (Yojson.Json_error "invalid packet");;
 
   let t_of_yojson_single json =
     match json with
-    | `Assoc _ -> t_of_yo json
+    | `Assoc _ -> t_of_yojson json
     | _ -> raise (Yojson.Json_error "invalid packet");;
 
-  let t_of_yojson (json : Yojson.Basic.t) =
-    match json with
+  let t_of_str (buf : string) =
+  let (header_str, json_str) = split_header_json buf in
+    let (content_length, content_type) = split_header header_str in
+    let json = Yojson.Basic.from_string json_str in
+    let select_packet = match json with
     | `List [] -> raise (Yojson.Json_error "invalid packet")
     | `List (x :: xs) ->  
       (* we inspect the first element to see what we're dealing with *)
       let x =
         match x with
-        | `Assoc _ -> t_of_yo x
+        | `Assoc _ -> t_of_yojson x
         | _ -> raise (Yojson.Json_error "invalid packet")
       in
       (match
@@ -319,7 +330,12 @@ module Packet = struct
               match resp with
               | Response n -> n
               | _ -> raise (Yojson.Json_error "invalid packet")) xs))
-      | _ -> t_of_yojson_single json;;
+      | _ -> t_of_yojson_single json in
+      {
+      content_length = content_length;
+      content_type = content_type;
+      body = select_packet
+    };;
 end
 
 module StringMap :
