@@ -356,6 +356,7 @@ module StringMap :
     val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
     val singleton : key -> 'a -> 'a t
     val remove : key -> 'a t -> 'a t
+    val find : key -> 'a t -> 'a
   end = Map.Make(String);;
 
  (*
