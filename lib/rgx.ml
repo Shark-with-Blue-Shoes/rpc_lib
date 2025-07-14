@@ -13,8 +13,13 @@ let get_header str =
 
 let get_json str = 
   try 
-    let json_rgx = "\\{.*\\}" in
-      let rgx = Re.Perl.compile_pat json_rgx in 
+    let arr_rgx = "\\[.*\\]" in
+    let rgx = Re.Perl.compile_pat arr_rgx  in
+      let mtch = Re.exec rgx str in 
+        let json = Re.Group.get mtch 0 in json
+  with _ -> try
+    let obj_rgx = "\\{.*\\}" in
+      let rgx = Re.Perl.compile_pat obj_rgx in 
         let mtch = Re.exec rgx str in 
           let json = Re.Group.get mtch 0 in json
   with 
