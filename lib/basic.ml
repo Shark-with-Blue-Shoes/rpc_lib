@@ -71,10 +71,6 @@ module Request = struct
 
   let yojson_of_t t : Yojson.Basic.t =
     `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_); "params", t.params] 
-
-  let print t = 
-    Printf.printf "%s\n%!" (Yojson.Basic.to_string (yojson_of_t t));;
-
 end
 
 module Notification = struct 
@@ -91,9 +87,6 @@ module Notification = struct
 
   let yojson_of_t t : Yojson.Basic.t =
     `Assoc ["method" , (`String t.method_); "params", t.params]
-     
-  let print t = 
-    Printf.printf "%s\n%!" (Yojson.Basic.to_string (yojson_of_t t));;
 
 end
 
@@ -197,22 +190,6 @@ module Response = struct
       id = id;
       result = res 
     }
-
-  (*This is a pretty print function, which is prettier than the standard pprint_string (Yojson.Basic.to_string x)*)
-  let print t =   
-    let id_str = Id.to_str t.id in
-    let res_str = match t.result with
-      (*If the result was Ok, print a json with that has result: ... *)
-    | Ok js -> let res_str = Yojson.Basic.to_string js in  
-    let str = Printf.sprintf "Response: {\n id: %s \n result: %s \n}\n\n\n" id_str res_str in str
-      (*If the result was an Error, print a json with that has error: ... *)
-    | Error err -> 
-      let code_str = Error.Code.to_int err.code in 
-      let data_str = Yojson.Basic.to_string err.data in 
-      let err_str = Printf.sprintf "Error: {\n code: %d \n message: %s \n data: %s \n   }" code_str err.message data_str in
-      let str = Printf.sprintf "Response: {\n id: %s \n error: %s \n}\n\n\n" id_str err_str in str
-        in
-    print_string res_str;;
 
   let t_of_yojson json : t =
     let res_opt = get_opt_mem "result" json  in
