@@ -343,16 +343,7 @@ module StringMap :
     val find : key -> 'a t -> 'a
   end = Map.Make(String);;
 
- (*
-This is what the ret_res would look like
- fun params -> let (x,b) = destruct params in fn x b*)
 
-(*This takes a module that has the procedure call function and the destructor*)
-
-let add_to_calls str (ret_res : Yojson.Basic.t -> Response.t) map : ('a -> 'b) StringMap.t= 
+let add_to_calls str (ret_res : Yojson.Basic.t -> Yojson.Basic.t) map : ('a -> 'b) StringMap.t= 
   StringMap.add str (fun params -> ret_res params) map;;
 
-(*let final_map = 
-  StringMap.empty |> add_to_calls "whatever" (fun params -> Response.construct_response (`Int 7) (Ok (Yojson.Basic.from_string "{}")))
-  |> add_to_calls "skibidi" (fun params -> Response.construct_response (`Int 7) (Ok (Yojson.Basic.from_string "{}")));;
-*)
