@@ -3,31 +3,21 @@ exception Missing_Member of string
 open Yojson.Basic.Util
 open Rgx
 
-let has_id json = 
-  let open Yojson.Basic.Util in
-  match json |> member "id" with
-  | `Null -> false
-  | _ -> true
-
-let has_method json = 
-  let open Yojson.Basic.Util in
-  match json |> member "method" with
-  | `Null -> false
-  | _ -> true
+let member_opt k = path [k]
 
 (*This gets a required member*)
-let get_req_mem json name : Yojson.Basic.t = 
-  let mem = member name json in
+let get_req_mem name json : Yojson.Basic.t = 
+  let mem = member_opt name json in
   match mem with
-  | `Null -> raise (Missing_Member (Printf.sprintf "%s is missing!\n" name))
-  | _ -> mem
+  | Some elem  -> elem
+  | None -> raise (Missing_Member (Printf.sprintf "A obligatory flag called %s is missing!\n" name))
 
 (*This gets an option member*)
-let get_opt_mem json name : Yojson.Basic.t = 
-  let mem = member name json in
+let get_opt_mem name json : Yojson.Basic.t = 
+  let mem = member_opt name json in
   match mem with
-  | `Null -> `Null
-  | m -> m
+  | Some elem -> elem 
+  | None -> `Null;;
 
 module Constant = struct
   let jsonrpc = "jsonrpc"
@@ -74,9 +64,9 @@ module Request = struct
 
   let t_of_yojson json : t = 
     {
-      id = get_req_mem json "id" |> Id.t_of_yojson;
-      method_ = get_req_mem json "method" |> to_string ;
-      params = get_opt_mem json "params"
+      id = get_req_mem "id" json |> Id.t_of_yojson;
+      method_ = get_req_mem "method" json |> to_string ;
+      params = get_opt_mem "params" json
     }
 
   let yojson_of_t t : Yojson.Basic.t =
@@ -95,8 +85,8 @@ module Notification = struct
   
   let t_of_yojson json : t = 
     {
-      method_ = get_req_mem json "method" |> to_string ;
-      params = get_opt_mem json  "params"
+      method_ = get_req_mem "method" json |> to_string ;
+      params = get_opt_mem "params" json 
     }
 
   let yojson_of_t t : Yojson.Basic.t =
@@ -191,9 +181,9 @@ module Response = struct
     
     let t_of_yojson (json : Yojson.Basic.t) : t =
       {
-        code = get_req_mem json "code" |> Code.t_of_yojson;
-        message = get_req_mem json "message" |> to_string;
-        data = get_req_mem json "data"
+        code = get_req_mem "code" json |> Code.t_of_yojson;
+        message = get_req_mem "message" json |> to_string;
+        data = get_req_mem "data" json 
     }
   end
 
@@ -225,9 +215,9 @@ module Response = struct
     print_string res_str;;
 
   let t_of_yojson json : t =
-    let res_opt = get_opt_mem json "result" in
+    let res_opt = get_opt_mem "result" json  in
       let res = match res_opt with
-    | `Null -> Error (get_req_mem json "error" |> Error.t_of_yojson)
+    | `Null -> Error (get_req_mem "error" json |> Error.t_of_yojson)
     | _ -> Ok res_opt in
     construct_response (Id.t_of_yojson json) res;;
 
@@ -243,7 +233,7 @@ end
 
 
 let assert_jsonrpc_version json =
-    let jsonrpc = get_req_mem json "jsonrpc" |> to_string in
+    let jsonrpc = get_req_mem "jsonrpc" json |> to_string in
     if not (String.equal jsonrpc Constant.jsonrpcv)
     then
       raise (Yojson.Json_error ("invalid packet: jsonrpc version doesn't match " ^ jsonrpc))
