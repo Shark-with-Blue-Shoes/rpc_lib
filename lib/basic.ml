@@ -13,11 +13,8 @@ let get_req_mem name json : Yojson.Basic.t =
   | None -> raise (Missing_Member (Printf.sprintf "A obligatory flag called %s is missing!\n" name))
 
 (*This gets an option member*)
-let get_opt_mem name json : Yojson.Basic.t = 
-  let mem = member_opt name json in
-  match mem with
-  | Some elem -> elem 
-  | None -> `Null;;
+let get_opt_mem name json : Yojson.Basic.t option = 
+  member_opt name json;;
 
 module Constant = struct
   let jsonrpc = "jsonrpc"
@@ -59,7 +56,7 @@ module Request = struct
   type t =
     { id : Id.t
     ; method_ : string
-    ; params : Yojson.Basic.t
+    ; params : Yojson.Basic.t option
     }
 
   let t_of_yojson json : t = 
@@ -70,13 +67,15 @@ module Request = struct
     }
 
   let yojson_of_t t : Yojson.Basic.t =
-    `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_); "params", t.params] 
+    match t.params with
+    | None -> `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_);]
+    | Some params -> `Assoc ["id",  (Id.yojson_of_t t.id); "method" , (`String t.method_); "params", params] ;;
 end
 
 module Notification = struct 
   type t =
     { method_ : string
-    ; params : Yojson.Basic.t
+    ; params : Yojson.Basic.t option
     }
   
   let t_of_yojson json : t = 
@@ -86,7 +85,9 @@ module Notification = struct
     }
 
   let yojson_of_t t : Yojson.Basic.t =
-    `Assoc ["method" , (`String t.method_); "params", t.params]
+    match t.params with
+    | None -> `Assoc ["method" , (`String t.method_);]
+    | Some params -> `Assoc ["method" , (`String t.method_); "params", params] ;;
 
 end
 
@@ -193,9 +194,9 @@ module Response = struct
 
   let t_of_yojson json : t =
     let res_opt = get_opt_mem "result" json  in
-      let res = match res_opt with
-    | `Null -> Error (get_req_mem "error" json |> Error.t_of_yojson)
-    | _ -> Ok res_opt in
+    let res = match res_opt with
+    | None -> Error (get_req_mem "error" json |> Error.t_of_yojson)
+    | Some result -> Ok result in
     construct_response (Id.t_of_yojson json) res;;
 
     let yojson_of_t t : Yojson.Basic.t = 
