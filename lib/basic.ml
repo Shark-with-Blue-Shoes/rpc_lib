@@ -163,8 +163,8 @@ module Response = struct
       ; data : Yojson.Basic.t
       }
 
-    let construct_error code msg _data : t = 
-      {
+    let construct_error code msg _data = 
+      Error {
         code = code;
         message = msg;
         data = _data
@@ -332,8 +332,8 @@ let call_request method_ params =
   try
     (StringMap.find method_ !all_request_calls) params
   with
-    Not_found -> Response.construct_response (`Int 7) 
-    (Error (Response.Error.construct_error MethodNotFound "Request: Method called was not available" (from_string "{}"))) |> Response.yojson_of_t 
+    Not_found -> Response.Error.construct_error MethodNotFound "Request: Method called was not available" (from_string "{}") |> 
+    Response.construct_response (`Int 7) |> Response.yojson_of_t 
 ;;
 
 let all_notifiation_calls = ref StringMap.empty;;
@@ -344,8 +344,8 @@ let call_notification method_ params =
   try
     (StringMap.find method_ !all_notifiation_calls) params
   with
-    Not_found -> Response.construct_response (`Int 7) 
-    (Error (Response.Error.construct_error MethodNotFound "Notification: Method called was not available" (from_string "{}"))) |> Response.yojson_of_t 
+    Not_found -> Response.Error.construct_error MethodNotFound "Notification: Method called was not available" (from_string "{}") |> 
+    Response.construct_response (`Int 7) |> Response.yojson_of_t 
 ;;
 
 let respond_to_batch = 
