@@ -322,6 +322,9 @@ module StringMap :
   end = Map.Make(String);;
 
 
-let add_to_calls str (ret_res : Yojson.Basic.t -> Yojson.Basic.t) map : ('a -> 'b) StringMap.t= 
-  StringMap.add str (fun params -> ret_res params) map;;
+let add_to_requests str (response : Yojson.Basic.t -> Yojson.Basic.t) map : ('a -> 'b) StringMap.t= 
+  StringMap.add str (fun params -> response params) map;;
+
+let add_to_notifs str (action : Yojson.Basic.t -> unit) map : ('a -> 'b) StringMap.t= 
+  StringMap.add str (fun params -> action params) map;;
 
