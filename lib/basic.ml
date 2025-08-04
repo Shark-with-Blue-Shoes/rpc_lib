@@ -325,32 +325,3 @@ module StringMap :
 let add_to_calls str (ret_res : Yojson.Basic.t -> Yojson.Basic.t) map : ('a -> 'b) StringMap.t= 
   StringMap.add str (fun params -> ret_res params) map;;
 
-let all_request_calls = ref StringMap.empty;;
-
-let call_request method_ params =
-  let open Yojson.Basic in
-  try
-    (StringMap.find method_ !all_request_calls) params
-  with
-    Not_found -> Response.Error.construct_error MethodNotFound "Request: Method called was not available" (from_string "{}") |> 
-    Response.construct_response (`Int 7) |> Response.yojson_of_t 
-;;
-
-let all_notifiation_calls = ref StringMap.empty;;
-
-let call_notification method_ params =
-  let open Yojson.Basic in
-  let _ = params in
-  try
-    (StringMap.find method_ !all_notifiation_calls) params
-  with
-    Not_found -> Response.Error.construct_error MethodNotFound "Notification: Method called was not available" (from_string "{}") |> 
-    Response.construct_response (`Int 7) |> Response.yojson_of_t 
-;;
-
-let respond_to_batch = 
-  fun (call : Packet.call) -> 
-  match call with 
-    | `Notification not -> (call_notification not.method_ not.params) |> Yojson.Basic.pretty_print Format.std_formatter
-    | `Request req -> (call_request req.method_ req.params) |> Yojson.Basic.pretty_print Format.std_formatter 
-
